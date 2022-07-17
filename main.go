@@ -4,36 +4,35 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/fatih/color"
 )
 
 type Todo struct {
-	Id        int
-	Title     string
-	Completed bool
+	Id        int    `json:"id"`
+	Title     string `json:"title"`
+	Completed bool   `json:"completed"`
 }
 
 func main() {
-	// Chanel
-	ch := make(chan string)
-	errCh := make(chan error)
-	go func() {
-		title, err := fetchTodoTitle()
-		if err != nil {
-			errCh <- err
-			return
-		}
-		ch <- title
-		return
-	}()
-	fmt.Println("Hello, World!")
-	defer close(ch)
-	defer close(errCh)
-	select {
-	case err := <-errCh:
+	// Web Server
+	color.Cyan("server started on port 8080")
+	http.HandleFunc("/", homeHandler)
+	err := http.ListenAndServe(":8080", nil)
+	if err != nil {
 		panic(err)
-	case title := <-ch:
-		fmt.Println(title)
 	}
+}
+
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	title, err := fetchTodoTitle()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("Error: %s", err)))
+		return
+	}
+	w.Write([]byte(title))
 }
 
 func fetchTodoTitle() (string, error) {
